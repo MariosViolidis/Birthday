@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Happy Birthday!</title>
+  <style>
+    :root {
+      --bg: #0f1020;
+      --fg: #ffffff;
+      --accent: #ffcc00;
+    }
+    html, body { height: 100%; margin: 0; }
+    body {
+      display: grid;
+      place-items: center;
+      background: radial-gradient(1200px 800px at 50% 20%, #1a1b3a 0%, var(--bg) 60%);
+      color: var(--fg);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif;
+      overflow: hidden;
+    }
+    .card {
+      text-align: center;
+      padding: 2.2rem 2rem;
+      border-radius: 1.25rem;
+      background: rgba(255,255,255,0.06);
+      backdrop-filter: blur(6px);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(255,255,255,0.08);
+      max-width: 720px;
+      margin: 1rem;
+    }
+    h1 {
+      font-size: clamp(2.4rem, 4vw + 1rem, 4rem);
+      margin: 0 0 0.2rem 0;
+      line-height: 1.05;
+      letter-spacing: 0.5px;
+      text-shadow: 0 4px 24px rgba(0,0,0,0.5);
+    }
+    .name {
+      color: var(--accent);
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    p.tag {
+      margin: 0.6rem 0 1.2rem 0;
+      opacity: 0.9;
+      font-size: clamp(1.05rem, 1.1rem, 1.2rem);
+    }
+    .btns { display: flex; gap: .75rem; justify-content: center; flex-wrap: wrap; }
+    button {
+      border: none;
+      padding: .75rem 1rem;
+      border-radius: .9rem;
+      background: #2a2b4a;
+      color: var(--fg);
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform .06s ease, box-shadow .2s ease;
+      box-shadow: 0 6px 22px rgba(0,0,0,.25);
+    }
+    button:hover { transform: translateY(-1px); }
+    button.primary { background: #3b3cff; }
+    .credit { position: fixed; bottom: .6rem; left: 50%; transform: translateX(-50%); font-size: .8rem; opacity: .7; }
+    canvas#confetti { position: fixed; inset: 0; z-index: -1; }
+  </style>
+</head>
+<body>
+  <canvas id="confetti"></canvas>
+  <div class="card">
+    <h1>🎉 Happy Birthday <span class="name" id="name">Friend</span>! 🎂</h1>
+    <p class="tag">Wishing you a day filled with joy, cake, and surprises.</p>
+    <div class="btns">
+      <button class="primary" id="reveal">Make a wish ✨</button>
+      <button id="confettiBtn">More confetti 🎊</button>
+    </div>
+  </div>
+  <div class="credit">Made with ❤️ — Customize by adding <code>?name=Maria</code> to the URL</div>
+
+  <script>
+    // Personalize name via URL: ?name=Maria
+    const params = new URLSearchParams(location.search);
+    const name = params.get('name') || 'Friend';
+    document.getElementById('name').textContent = name;
+
+    // Simple lightweight confetti
+    const canvas = document.getElementById('confetti');
+    const ctx = canvas.getContext('2d');
+    let W, H, pieces = [], frame, running = true;
+
+    function resize() {
+      W = canvas.width = window.innerWidth;
+      H = canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    function rand(min, max) { return Math.random() * (max - min) + min; }
+
+    function spawn(count=120) {
+      for (let i = 0; i < count; i++) {
+        pieces.push({
+          x: rand(0, W),
+          y: rand(-H, 0),
+          r: rand(2, 6),
+          w: rand(6, 14),
+          h: rand(8, 18),
+          tilt: rand(-0.5, 0.5),
+          alpha: rand(0.7, 1),
+          vx: rand(-0.6, 0.6),
+          vy: rand(1.2, 3.2),
+          rot: rand(0, Math.PI*2),
+          vr: rand(-0.08, 0.08),
+          color: `hsl(${Math.floor(rand(0,360))}, 90%, ${Math.floor(rand(55,70))}%)`
+        });
+      }
+    }
+
+    function tick() {
+      if (!running) return;
+      ctx.clearRect(0,0,W,H);
+      for (let p of pieces) {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.rot += p.vr;
+        if (p.y > H + 20) { // recycle from top
+          p.y = -20;
+          p.x = rand(0, W);
+        }
+        ctx.save();
+        ctx.globalAlpha = p.alpha;
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+        ctx.restore();
+      }
+      frame = requestAnimationFrame(tick);
+    }
+
+    spawn(200);
+    tick();
+
+    document.getElementById('confettiBtn').addEventListener('click', () => spawn(150));
+    document.getElementById('reveal').addEventListener('click', () => {
+      spawn(300);
+      // playful vibration for mobile (best-effort)
+      if (navigator.vibrate) navigator.vibrate([40, 20, 40]);
+    });
+  </script>
+</body>
+</html>
