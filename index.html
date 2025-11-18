@@ -22,11 +22,11 @@
     }
 
     /* ---- PHOTO FRAME (REAL <img>, NO CROPPING) ---- */
-    .bg-frame {
+   .bg-frame {
       position: fixed;
       inset: 0;
-      z-index: -1;
-      background: #000; /* around the photo */
+      z-index: 0;           /* 🔹 base layer */
+      background: #000;     /* around the photo */
       display: flex;
       align-items: center;
       justify-content: center;
@@ -49,11 +49,11 @@
 
     /* Dark overlay so text stays readable */
     .shade {
-    position: fixed;
-    inset: 0;
-    z-index: -2;
-    background: radial-gradient(1200px 800px at 50% 20%, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.75) 60%);
-    pointer-events: none; /* 🔹 let clicks pass through to the image */
+      position: fixed;
+      inset: 0;
+      z-index: 1;           /* 🔹 above image, below confetti/card */
+      background: radial-gradient(1200px 800px at 50% 20%, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.75) 60%);
+      pointer-events: none; /* let clicks go through */
     }
 
 
@@ -73,7 +73,7 @@
 
     .card {
       position: relative;
-      z-index: 1;
+      z-index: 3;
       text-align: center;
       padding: 2.2rem 2rem;
       border-radius: 1.25rem;
@@ -116,14 +116,14 @@
     button.primary { background: #3b3cff; }
 
     .credit {
-      position: fixed;
-      bottom: .6rem;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: .8rem;
-      opacity: .7;
-      z-index: 1;
-      transition: opacity 0.25s ease;
+    position: fixed;
+    bottom: .6rem;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: .8rem;
+    opacity: .7;
+    z-index: 3;           /* 🔹 same layer as card */
+    transition: opacity 0.25s ease;
     }
     .credit.hidden {
       opacity: 0;
@@ -131,10 +131,10 @@
     }
 
     canvas#confetti {
-      position: fixed;
-      inset: 0;
-      z-index: -1;
-      pointer-events: none;
+    position: fixed;
+    inset: 0;
+    z-index: 2;           /* 🔹 above shade */
+    pointer-events: none; /* so clicks still reach image */
     }
 
     /* ---- LIGHTBOX (FULL IMAGE VIEW) ---- */
@@ -281,7 +281,18 @@
     }
 
     // click on background image to open full view
-    photoEl.addEventListener('click', openLightbox);
+    function handlePhotoTap(e) {
+      // Optional: debug popup so you SEE it's working
+      alert('Image tapped!');
+      openLightbox();
+    }
+
+    photoEl.addEventListener('click', handlePhotoTap);
+    photoEl.addEventListener('touchend', function (e) {
+      e.preventDefault();   // avoid ghost clicks
+      handlePhotoTap(e);
+      });
+
 
     // close on X button
     lightboxClose.addEventListener('click', closeLightbox);
