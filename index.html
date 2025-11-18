@@ -40,6 +40,7 @@
       filter: drop-shadow(0 0 22px rgba(255,255,255,0.3));
       transition: opacity 0.8s ease;
       opacity: 1;
+      cursor: zoom-in;              /* hint you can click */
     }
 
     .bg-frame img.fading-out {
@@ -60,6 +61,12 @@
       display: grid;
       place-items: center;
       padding: 1.5rem;
+      transition: opacity 0.25s ease;
+    }
+
+    .wrap.hidden {
+      opacity: 0;
+      pointer-events: none;
     }
 
     .card {
@@ -105,6 +112,7 @@
     }
     button:hover { transform: translateY(-1px); }
     button.primary { background: #3b3cff; }
+
     .credit {
       position: fixed;
       bottom: .6rem;
@@ -113,12 +121,55 @@
       font-size: .8rem;
       opacity: .7;
       z-index: 1;
+      transition: opacity 0.25s ease;
     }
+    .credit.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
     canvas#confetti {
       position: fixed;
       inset: 0;
       z-index: -1;
       pointer-events: none;
+    }
+
+    /* ---- LIGHTBOX (FULL IMAGE VIEW) ---- */
+    .lightbox {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.96);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+      z-index: 10;
+    }
+    .lightbox.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .lightbox img {
+      max-width: min(95vw, 1200px);
+      max-height: 90vh;
+      object-fit: contain;
+      border-radius: 18px;
+      box-shadow: 0 0 30px rgba(0,0,0,0.8);
+    }
+    .lightbox-close {
+      position: absolute;
+      top: 18px;
+      right: 22px;
+      padding: 0.35rem 0.85rem;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.7);
+      background: rgba(0,0,0,0.6);
+      color: #fff;
+      font-size: 1.1rem;
+      cursor: pointer;
     }
   </style>
 </head>
@@ -146,13 +197,19 @@
 
   <div class="credit">Made with ❤️ — Customize by adding <code>?name=Maria</code> to the URL</div>
 
+  <!-- Lightbox for full-image view -->
+  <div class="lightbox" id="lightbox">
+    <button class="lightbox-close" id="lightboxClose">✕</button>
+    <img id="lightboxImg" src="" alt="Full view">
+  </div>
+
   <script>
     // Personalize name via URL: ?name=Maria
     const params = new URLSearchParams(location.search);
     const name = params.get('name') || 'Friend';
     document.getElementById('name').textContent = name;
 
-    // ---------- PHOTO SLIDESHOW USING <img> (NO CROPPING) ----------
+    // ---------- PHOTO SLIDESHOW USING <img> ----------
     const PHOTOS = [
       'assets/images/01.jpg',
       'assets/images/02.jpg',
@@ -163,12 +220,12 @@
     const SLIDE_MS = 5000;
     const photoEl = document.getElementById('bgPhoto');
     let photoIndex = 0;
+    let slideshowTimer = null;
 
     function showPhoto(index) {
       const src = PHOTOS[index];
       const img = new Image();
       img.onload = () => {
-        // fade out current img, then swap src
         photoEl.classList.add('fading-out');
         setTimeout(() => {
           photoEl.src = src;
@@ -180,12 +237,57 @@
 
     function startPhotoSlideshow() {
       if (!PHOTOS.length) return;
+
+      // show first frame immediately
       showPhoto(photoIndex);
-      setInterval(() => {
+
+      if (slideshowTimer !== null) return; // already running
+      slideshowTimer = setInterval(() => {
         photoIndex = (photoIndex + 1) % PHOTOS.length;
         showPhoto(photoIndex);
       }, SLIDE_MS);
     }
+
+    function stopPhotoSlideshow() {
+      if (slideshowTimer !== null) {
+        clearInterval(slideshowTimer);
+        slideshowTimer = null;
+      }
+    }
+
+    // ---------- LIGHTBOX (FULL IMAGE VIEW) ----------
+    const lightbox = document.getElementById('lightbox');
+    const lightboxImg = document.getElementById('lightboxImg');
+    const lightboxClose = document.getElementById('lightboxClose');
+    const wrap = document.querySelector('.wrap');
+    const credit = document.querySelector('.credit');
+
+    function openLightbox() {
+      if (!PHOTOS.length) return;
+      stopPhotoSlideshow();
+      lightboxImg.src = PHOTOS[photoIndex];
+      lightbox.classList.add('open');
+      wrap.classList.add('hidden');
+      credit.classList.add('hidden');
+    }
+
+    function closeLightbox() {
+      lightbox.classList.remove('open');
+      wrap.classList.remove('hidden');
+      credit.classList.remove('hidden');
+      startPhotoSlideshow();
+    }
+
+    // click on background image to open full view
+    photoEl.addEventListener('click', openLightbox);
+
+    // close on X button
+    lightboxClose.addEventListener('click', closeLightbox);
+
+    // also close if you click the dark background (but not the image)
+    lightbox.addEventListener('click', (e) => {
+      if (e.target === lightbox) closeLightbox();
+    });
 
     // ---------- Confetti ----------
     const canvas = document.getElementById('confetti');
