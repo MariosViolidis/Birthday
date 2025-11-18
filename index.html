@@ -15,37 +15,43 @@
     body {
       margin: 0;
       min-height: 100vh;
-      background: var(--bg); /* fallback if images fail */
+      background: var(--bg);
       color: var(--fg);
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif;
       overflow: hidden;
     }
 
-    /* Background slideshow layers */
-  .bg, .bg-next {
-  position: fixed;
-  inset: 0;
-  z-index: -3;
-  background-position: center center;
-  background-size: 50% auto;  /* your chosen size */
-  background-repeat: no-repeat;
-  background-color: black;
-  transition: opacity 1200ms ease;
+    /* ---- PHOTO FRAME (REAL <img>, NO CROPPING) ---- */
+    .bg-frame {
+      position: fixed;
+      inset: 0;
+      z-index: -3;
+      background: #000; /* around the photo */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
 
-  /* ⭐ Subtle glow effect */
-  filter: drop-shadow(0 0 20px rgba(255,255,255,0.25));
-}
+    .bg-frame img {
+      max-width: min(90vw, 1100px); /* limit width */
+      max-height: 80vh;             /* limit height */
+      object-fit: contain;          /* keep proportions, no crop */
+      border-radius: 18px;
+      filter: drop-shadow(0 0 22px rgba(255,255,255,0.3));
+      transition: opacity 0.8s ease;
+      opacity: 1;
+    }
 
+    .bg-frame img.fading-out {
+      opacity: 0;
+    }
 
-    .bg { opacity: 1; }
-    .bg-next { opacity: 0; }
-
-    /* Dark overlay so text stays readable over the photos */
+    /* Dark overlay so text stays readable */
     .shade {
       position: fixed;
       inset: 0;
       z-index: -2;
-      background: radial-gradient(1200px 800px at 50% 20%, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.75) 60%);
+      background: radial-gradient(1200px 800px at 50% 20%, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.75) 60%);
     }
 
     /* Center card */
@@ -117,15 +123,16 @@
   </style>
 </head>
 <body>
-  <!-- Background slideshow layers -->
-  <div class="bg" id="bg"></div>
-  <div class="bg-next" id="bgNext"></div>
+  <!-- Photo slideshow (real <img>) -->
+  <div class="bg-frame">
+    <img id="bgPhoto" src="" alt="Birthday memories">
+  </div>
   <div class="shade"></div>
 
-  <!-- Confetti canvas -->
+  <!-- Confetti -->
   <canvas id="confetti"></canvas>
 
-  <!-- Centered card -->
+  <!-- Card -->
   <div class="wrap">
     <div class="card">
       <h1>🎉 Happy Birthday <span class="name" id="name">Friend</span>! 🎂</h1>
@@ -145,8 +152,7 @@
     const name = params.get('name') || 'Friend';
     document.getElementById('name').textContent = name;
 
-    // ---------- Slideshow setup ----------
-    // Your images: Birthday/assets/images/01.jpg ... 05.jpg
+    // ---------- PHOTO SLIDESHOW USING <img> (NO CROPPING) ----------
     const PHOTOS = [
       'assets/images/01.jpg',
       'assets/images/02.jpg',
@@ -154,50 +160,37 @@
       'assets/images/04.jpg',
       'assets/images/05.jpg'
     ];
+    const SLIDE_MS = 5000;
+    const photoEl = document.getElementById('bgPhoto');
+    let photoIndex = 0;
 
-    const SLIDE_MS = 5000; // time per image in ms
-    const bg = document.getElementById('bg');
-    const bgNext = document.getElementById('bgNext');
-
-    function preload(src) {
-      return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => resolve(src);
-        img.onerror = reject;
-        img.src = src;
-      });
+    function showPhoto(index) {
+      const src = PHOTOS[index];
+      const img = new Image();
+      img.onload = () => {
+        // fade out current img, then swap src
+        photoEl.classList.add('fading-out');
+        setTimeout(() => {
+          photoEl.src = src;
+          photoEl.classList.remove('fading-out');
+        }, 300);
+      };
+      img.src = src;
     }
 
-    async function startSlideshow() {
+    function startPhotoSlideshow() {
       if (!PHOTOS.length) return;
-
-      // Preload the first image so we don't flash a blank
-      try { await preload(PHOTOS[0]); } catch (e) {}
-
-      let i = 0;
-      bg.style.backgroundImage = `url('${PHOTOS[i]}')`;
-
-      setInterval(async () => {
-        i = (i + 1) % PHOTOS.length;
-        const src = PHOTOS[i];
-
-        try { await preload(src); } catch (e) {}
-
-        bgNext.style.backgroundImage = `url('${src}')`;
-        bgNext.style.opacity = 1;
-
-        // After fade, swap layers
-        setTimeout(() => {
-          bg.style.backgroundImage = `url('${src}')`;
-          bgNext.style.opacity = 0;
-        }, 1200);
+      showPhoto(photoIndex);
+      setInterval(() => {
+        photoIndex = (photoIndex + 1) % PHOTOS.length;
+        showPhoto(photoIndex);
       }, SLIDE_MS);
     }
 
     // ---------- Confetti ----------
     const canvas = document.getElementById('confetti');
     const ctx = canvas.getContext('2d');
-    let W, H, pieces = [], frame, running = true;
+    let W, H, pieces = [], running = true;
 
     function resize() {
       W = canvas.width = window.innerWidth;
@@ -234,7 +227,7 @@
         p.x += p.vx;
         p.y += p.vy;
         p.rot += p.vr;
-        if (p.y > H + 20) { // recycle from top
+        if (p.y > H + 20) {
           p.y = -20;
           p.x = rand(0, W);
         }
@@ -246,7 +239,7 @@
         ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
         ctx.restore();
       }
-      frame = requestAnimationFrame(tick);
+      requestAnimationFrame(tick);
     }
 
     spawn(200);
@@ -255,12 +248,10 @@
     document.getElementById('confettiBtn').addEventListener('click', () => spawn(150));
     document.getElementById('reveal').addEventListener('click', () => {
       spawn(300);
-      // playful vibration for mobile (best-effort)
       if (navigator.vibrate) navigator.vibrate([40, 20, 40]);
     });
 
-    // Start slideshow after everything is ready
-    window.addEventListener('load', startSlideshow);
+    window.addEventListener('load', startPhotoSlideshow);
   </script>
 </body>
 </html>
