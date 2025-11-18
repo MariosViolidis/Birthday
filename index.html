@@ -22,16 +22,20 @@
     }
 
     /* Background slideshow layers */
-    .bg, .bg-next {
-    position: fixed;
-    inset: 0;
-    z-index: -3;
-    background-position: center center;
-    background-size: contain;    /* show full image */
-    background-repeat: no-repeat;
-    background-color: black;     /* optional: fills blank areas */
-    transition: opacity 1200ms ease;
-  }
+  .bg, .bg-next {
+  position: fixed;
+  inset: 0;
+  z-index: -3;
+  background-position: center center;
+  background-size: 50% auto;  /* your chosen size */
+  background-repeat: no-repeat;
+  background-color: black;
+  transition: opacity 1200ms ease;
+
+  /* ⭐ Subtle glow effect */
+  filter: drop-shadow(0 0 20px rgba(255,255,255,0.25));
+}
+
 
     .bg { opacity: 1; }
     .bg-next { opacity: 0; }
