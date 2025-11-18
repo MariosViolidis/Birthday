@@ -11,15 +11,48 @@
       --accent: #ffcc00;
     }
     html, body { height: 100%; margin: 0; }
+
     body {
-      display: grid;
-      place-items: center;
-      background: radial-gradient(1200px 800px at 50% 20%, #1a1b3a 0%, var(--bg) 60%);
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg); /* fallback if images fail */
       color: var(--fg);
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif;
       overflow: hidden;
     }
+
+    /* Background slideshow layers */
+    .bg, .bg-next {
+      position: fixed;
+      inset: 0;
+      z-index: -3;
+      background-position: center center;
+      background-size: cover;
+      background-repeat: no-repeat;
+      transition: opacity 1200ms ease;
+    }
+    .bg { opacity: 1; }
+    .bg-next { opacity: 0; }
+
+    /* Dark overlay so text stays readable over the photos */
+    .shade {
+      position: fixed;
+      inset: 0;
+      z-index: -2;
+      background: radial-gradient(1200px 800px at 50% 20%, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.75) 60%);
+    }
+
+    /* Center card */
+    .wrap {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 1.5rem;
+    }
+
     .card {
+      position: relative;
+      z-index: 1;
       text-align: center;
       padding: 2.2rem 2rem;
       border-radius: 1.25rem;
@@ -60,20 +93,44 @@
     }
     button:hover { transform: translateY(-1px); }
     button.primary { background: #3b3cff; }
-    .credit { position: fixed; bottom: .6rem; left: 50%; transform: translateX(-50%); font-size: .8rem; opacity: .7; }
-    canvas#confetti { position: fixed; inset: 0; z-index: -1; }
+    .credit {
+      position: fixed;
+      bottom: .6rem;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: .8rem;
+      opacity: .7;
+      z-index: 1;
+    }
+    canvas#confetti {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+    }
   </style>
 </head>
 <body>
+  <!-- Background slideshow layers -->
+  <div class="bg" id="bg"></div>
+  <div class="bg-next" id="bgNext"></div>
+  <div class="shade"></div>
+
+  <!-- Confetti canvas -->
   <canvas id="confetti"></canvas>
-  <div class="card">
-    <h1>🎉 Happy Birthday <span class="name" id="name">Friend</span>! 🎂</h1>
-    <p class="tag">Wishing you a day filled with joy, cake, and surprises.</p>
-    <div class="btns">
-      <button class="primary" id="reveal">Make a wish ✨</button>
-      <button id="confettiBtn">More confetti 🎊</button>
+
+  <!-- Centered card -->
+  <div class="wrap">
+    <div class="card">
+      <h1>🎉 Happy Birthday <span class="name" id="name">Friend</span>! 🎂</h1>
+      <p class="tag">Wishing you a day filled with joy, cake, and surprises.</p>
+      <div class="btns">
+        <button class="primary" id="reveal">Make a wish ✨</button>
+        <button id="confettiBtn">More confetti 🎊</button>
+      </div>
     </div>
   </div>
+
   <div class="credit">Made with ❤️ — Customize by adding <code>?name=Maria</code> to the URL</div>
 
   <script>
@@ -82,7 +139,56 @@
     const name = params.get('name') || 'Friend';
     document.getElementById('name').textContent = name;
 
-    // Simple lightweight confetti
+    // ---------- Slideshow setup ----------
+    // Your images: Birthday/assets/images/01.jpg ... 05.jpg
+    const PHOTOS = [
+      'assets/images/01.jpg',
+      'assets/images/02.jpg',
+      'assets/images/03.jpg',
+      'assets/images/04.jpg',
+      'assets/images/05.jpg'
+    ];
+
+    const SLIDE_MS = 5000; // time per image in ms
+    const bg = document.getElementById('bg');
+    const bgNext = document.getElementById('bgNext');
+
+    function preload(src) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(src);
+        img.onerror = reject;
+        img.src = src;
+      });
+    }
+
+    async function startSlideshow() {
+      if (!PHOTOS.length) return;
+
+      // Preload the first image so we don't flash a blank
+      try { await preload(PHOTOS[0]); } catch (e) {}
+
+      let i = 0;
+      bg.style.backgroundImage = `url('${PHOTOS[i]}')`;
+
+      setInterval(async () => {
+        i = (i + 1) % PHOTOS.length;
+        const src = PHOTOS[i];
+
+        try { await preload(src); } catch (e) {}
+
+        bgNext.style.backgroundImage = `url('${src}')`;
+        bgNext.style.opacity = 1;
+
+        // After fade, swap layers
+        setTimeout(() => {
+          bg.style.backgroundImage = `url('${src}')`;
+          bgNext.style.opacity = 0;
+        }, 1200);
+      }, SLIDE_MS);
+    }
+
+    // ---------- Confetti ----------
     const canvas = document.getElementById('confetti');
     const ctx = canvas.getContext('2d');
     let W, H, pieces = [], frame, running = true;
@@ -96,7 +202,7 @@
 
     function rand(min, max) { return Math.random() * (max - min) + min; }
 
-    function spawn(count=120) {
+    function spawn(count = 120) {
       for (let i = 0; i < count; i++) {
         pieces.push({
           x: rand(0, W),
@@ -108,16 +214,16 @@
           alpha: rand(0.7, 1),
           vx: rand(-0.6, 0.6),
           vy: rand(1.2, 3.2),
-          rot: rand(0, Math.PI*2),
+          rot: rand(0, Math.PI * 2),
           vr: rand(-0.08, 0.08),
-          color: `hsl(${Math.floor(rand(0,360))}, 90%, ${Math.floor(rand(55,70))}%)`
+          color: `hsl(${Math.floor(rand(0, 360))}, 90%, ${Math.floor(rand(55, 70))}%)`
         });
       }
     }
 
     function tick() {
       if (!running) return;
-      ctx.clearRect(0,0,W,H);
+      ctx.clearRect(0, 0, W, H);
       for (let p of pieces) {
         p.x += p.vx;
         p.y += p.vy;
@@ -131,7 +237,7 @@
         ctx.translate(p.x, p.y);
         ctx.rotate(p.rot);
         ctx.fillStyle = p.color;
-        ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+        ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
         ctx.restore();
       }
       frame = requestAnimationFrame(tick);
@@ -146,6 +252,9 @@
       // playful vibration for mobile (best-effort)
       if (navigator.vibrate) navigator.vibrate([40, 20, 40]);
     });
+
+    // Start slideshow after everything is ready
+    window.addEventListener('load', startSlideshow);
   </script>
 </body>
 </html>
