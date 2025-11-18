@@ -22,10 +22,10 @@
     }
 
     /* ---- PHOTO FRAME (REAL <img>, NO CROPPING) ---- */
-   .bg-frame {
+    .bg-frame {
       position: fixed;
       inset: 0;
-      z-index: 0;           /* 🔹 base layer */
+      z-index: 0;           /* base layer */
       background: #000;     /* around the photo */
       display: flex;
       align-items: center;
@@ -51,11 +51,18 @@
     .shade {
       position: fixed;
       inset: 0;
-      z-index: 1;           /* 🔹 above image, below confetti/card */
+      z-index: 1;           /* above image, below confetti & card */
       background: radial-gradient(1200px 800px at 50% 20%, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.75) 60%);
       pointer-events: none; /* let clicks go through */
     }
 
+    /* Confetti above shade & image, but doesn't eat clicks */
+    canvas#confetti {
+      position: fixed;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+    }
 
     /* Center card */
     .wrap {
@@ -100,41 +107,51 @@
       opacity: 0.9;
       font-size: clamp(1.05rem, 1.1rem, 1.2rem);
     }
-    .btns { display: flex; gap: .75rem; justify-content: center; flex-wrap: wrap; }
-    button {
+
+    .btns {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      justify-content: center;
+      align-items: stretch;
+      margin-top: 1.4rem;
+    }
+    .btns button {
       border: none;
-      padding: .75rem 1rem;
-      border-radius: .9rem;
+      padding: 0.7rem 1rem;
+      border-radius: 0.9rem;
       background: #2a2b4a;
       color: var(--fg);
       font-weight: 600;
       cursor: pointer;
-      transition: transform .06s ease, box-shadow .2s ease;
-      box-shadow: 0 6px 22px rgba(0,0,0,.25);
+      transition: transform 0.06s ease, box-shadow 0.2s ease, background 0.2s ease;
+      box-shadow: 0 6px 22px rgba(0,0,0,0.25);
+      text-align: left;
     }
-    button:hover { transform: translateY(-1px); }
-    button.primary { background: #3b3cff; }
+    .btns button span.small {
+      display: block;
+      font-size: 0.85rem;
+      opacity: 0.9;
+      margin-top: 0.15rem;
+    }
+    .btns button:hover {
+      transform: translateY(-1px);
+      background: #353764;
+    }
 
     .credit {
-    position: fixed;
-    bottom: .6rem;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: .8rem;
-    opacity: .7;
-    z-index: 3;           /* 🔹 same layer as card */
-    transition: opacity 0.25s ease;
+      position: fixed;
+      bottom: .6rem;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: .8rem;
+      opacity: .7;
+      z-index: 3;
+      transition: opacity 0.25s ease;
     }
     .credit.hidden {
       opacity: 0;
       pointer-events: none;
-    }
-
-    canvas#confetti {
-    position: fixed;
-    inset: 0;
-    z-index: 2;           /* 🔹 above shade */
-    pointer-events: none; /* so clicks still reach image */
     }
 
     /* ---- LIGHTBOX (FULL IMAGE VIEW) ---- */
@@ -190,9 +207,20 @@
     <div class="card">
       <h1>🎉 Happy Birthday <span class="name" id="name">Friend</span>! 🎂</h1>
       <p class="tag">Wishing you a day filled with joy, cake, and surprises.</p>
+
       <div class="btns">
-        <button class="primary" id="reveal">Make a wish ✨</button>
-        <button id="confettiBtn">More confetti 🎊</button>
+        <button id="btnEnglish">
+          Happy Birthday in English
+          <span class="small">("Happy Birthday!")</span>
+        </button>
+        <button id="btnGreek">
+          Happy Birthday in Greek
+          <span class="small">("Χρόνια Πολλὰ!")</span>
+        </button>
+        <button id="btnDutch">
+          Happy Birthday in Dutch
+          <span class="small">("Fijne verjaardag!")</span>
+        </button>
       </div>
     </div>
   </div>
@@ -204,6 +232,11 @@
     <button class="lightbox-close" id="lightboxClose">✕</button>
     <img id="lightboxImg" src="" alt="Full view">
   </div>
+
+  <!-- Voice recordings -->
+  <audio id="voiceEnglish" src="assets/voice/HappyBirthdayEnglish.m4a" preload="auto"></audio>
+  <audio id="voiceGreek"   src="assets/voice/HappyBirthdayGreek.m4a"   preload="auto"></audio>
+  <audio id="voiceDutch"   src="assets/voice/HappyBirthdayDutch.m4a"   preload="auto"></audio>
 
   <script>
     // Personalize name via URL: ?name=Maria
@@ -280,19 +313,16 @@
       startPhotoSlideshow();
     }
 
-    // click on background image to open full view
     function handlePhotoTap(e) {
-      // Optional: debug popup so you SEE it's working
-      // alert('Image tapped!');
       openLightbox();
     }
 
+    // click / tap on background image to open full view
     photoEl.addEventListener('click', handlePhotoTap);
     photoEl.addEventListener('touchend', function (e) {
-      e.preventDefault();   // avoid ghost clicks
+      e.preventDefault();
       handlePhotoTap(e);
-      });
-
+    });
 
     // close on X button
     lightboxClose.addEventListener('click', closeLightbox);
@@ -360,12 +390,36 @@
     spawn(200);
     tick();
 
-    document.getElementById('confettiBtn').addEventListener('click', () => spawn(150));
-    document.getElementById('reveal').addEventListener('click', () => {
-      spawn(300);
-      if (navigator.vibrate) navigator.vibrate([40, 20, 40]);
-    });
+    // ---------- Voice buttons ----------
+    const audioEnglish = document.getElementById('voiceEnglish');
+    const audioGreek   = document.getElementById('voiceGreek');
+    const audioDutch   = document.getElementById('voiceDutch');
 
+    const btnEnglish = document.getElementById('btnEnglish');
+    const btnGreek   = document.getElementById('btnGreek');
+    const btnDutch   = document.getElementById('btnDutch');
+
+    function stopAllVoices() {
+      [audioEnglish, audioGreek, audioDutch].forEach(a => {
+        a.pause();
+        a.currentTime = 0;
+      });
+    }
+
+    function playVoice(audioEl) {
+      stopAllVoices();
+      // small confetti burst when playing
+      spawn(80);
+      audioEl.play().catch(() => {
+        // ignore if autoplay blocked, user will tap again
+      });
+    }
+
+    btnEnglish.addEventListener('click', () => playVoice(audioEnglish));
+    btnGreek.addEventListener('click',   () => playVoice(audioGreek));
+    btnDutch.addEventListener('click',   () => playVoice(audioDutch));
+
+    // start slideshow when page loads
     window.addEventListener('load', startPhotoSlideshow);
   </script>
 </body>
