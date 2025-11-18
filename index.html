@@ -23,14 +23,16 @@
 
     /* Background slideshow layers */
     .bg, .bg-next {
-      position: fixed;
-      inset: 0;
-      z-index: -3;
-      background-position: center center;
-      background-size: cover;
-      background-repeat: no-repeat;
-      transition: opacity 1200ms ease;
-    }
+    position: fixed;
+    inset: 0;
+    z-index: -3;
+    background-position: center center;
+    background-size: contain;    /* show full image */
+    background-repeat: no-repeat;
+    background-color: black;     /* optional: fills blank areas */
+    transition: opacity 1200ms ease;
+  }
+
     .bg { opacity: 1; }
     .bg-next { opacity: 0; }
 
