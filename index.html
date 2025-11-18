@@ -49,11 +49,13 @@
 
     /* Dark overlay so text stays readable */
     .shade {
-      position: fixed;
-      inset: 0;
-      z-index: -2;
-      background: radial-gradient(1200px 800px at 50% 20%, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.75) 60%);
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    background: radial-gradient(1200px 800px at 50% 20%, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.75) 60%);
+    pointer-events: none; /* 🔹 let clicks pass through to the image */
     }
+
 
     /* Center card */
     .wrap {
